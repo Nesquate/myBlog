@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/websiteIcon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"nesquate.tw","root":"/","scheme":"Gemini","version":"8.0.0-rc.2","exturl":false,"sidebar":{"position":"left","width":220,"display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="事由之前有用過 Travis CI 對自己網站的 Hexo 進行持續整合，整個設定不會太困難，照網路上教學走就好了。 不過後來還是不用 Travis CI 來對 Hexo 進行 Deploy 了，主要是因為：  我現在的網站有 Disqus 留言板可以給大家留言，Disqus 的留言板要綁 API Key 才可以使用，API Key 不是可以隨意洩漏的東西。（那時候我的 Hexo repo 是公開">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hexo 與 在 Tomcat 上的 Jenkins - 01 緣由以及規劃">
+<meta property="og:url" content="http://nesquate.tw/2020/05/hexo-with-tomcat-jenkins-01.html">
+<meta property="og:site_name" content="Nesquate">
+<meta property="og:description" content="事由之前有用過 Travis CI 對自己網站的 Hexo 進行持續整合，整個設定不會太困難，照網路上教學走就好了。 不過後來還是不用 Travis CI 來對 Hexo 進行 Deploy 了，主要是因為：  我現在的網站有 Disqus 留言板可以給大家留言，Disqus 的留言板要綁 API Key 才可以使用，API Key 不是可以隨意洩漏的東西。（那時候我的 Hexo repo 是公開">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/hexo_with_Jenkins.png">
+<meta property="article:published_time" content="2020-05-31T02:37:16.000Z">
+<meta property="article:modified_time" content="2020-06-05T07:16:05.842Z">
+<meta property="article:author" content="Nesquate">
+<meta property="article:tag" content="Hexo, Tomcat, Jenkins">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://nesquate.tw/images/posts/hexo_jenkins/hexo_with_Jenkins.png">
+
+<link rel="canonical" href="http://nesquate.tw/2020/05/hexo-with-tomcat-jenkins-01.html">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>Hexo 與 在 Tomcat 上的 Jenkins - 01 緣由以及規劃 | Nesquate</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+        <span class="toggle-line toggle-line-first"></span>
+        <span class="toggle-line toggle-line-middle"></span>
+        <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Nesquate</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">希望能夠被記得</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤<span class="badge">8</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類<span class="badge">4</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔<span class="badge">7</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="http://nesquate.tw/2020/05/hexo-with-tomcat-jenkins-01.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/breathe_is_happy.JPG">
+      <meta itemprop="name" content="Nesquate">
+      <meta itemprop="description" content="即將邁入爆肝階段的大學生">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Nesquate">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Hexo 與 在 Tomcat 上的 Jenkins - 01 緣由以及規劃
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+
+              <time title="創建時間：2020-05-31 10:37:16" itemprop="dateCreated datePublished" datetime="2020-05-31T10:37:16+08:00">2020-05-31</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新於</span>
+                <time title="修改時間：2020-06-05 15:16:05" itemprop="dateModified" datetime="2020-06-05T15:16:05+08:00">2020-06-05</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/WebApp/" itemprop="url" rel="index"><span itemprop="name">WebApp</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>1.7k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>2 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="事由"><a href="#事由" class="headerlink" title="事由"></a>事由</h2><p>之前有用過 Travis CI 對自己網站的 Hexo 進行持續整合，整個設定不會太困難，照網路上教學走就好了。</p>
+<p>不過後來還是不用 Travis CI 來對 Hexo 進行 Deploy 了，主要是因為：</p>
+<ol>
+<li>我現在的網站有 Disqus 留言板可以給大家留言，Disqus 的留言板要綁 API Key 才可以使用，API Key 不是可以隨意洩漏的東西。（那時候我的 Hexo repo 是公開的）</li>
+<li>那這樣來說，把整個 repo 設成 Private 不就好了？然而這樣就沒辦法使用 Travis CI 免費版了，付費版每個月 69 鎂起（截至 2020-05-31 ），窮學生無法負擔。</li>
+<li>重新規劃 - 我之前是把整個 Hexo 檔案丟上去，感覺一點都不 CI/CD。</li>
+</ol>
+<p>出於以上原因就想說乾脆整個重來好了，<del>沒想到連網站也一起幾乎重來了</del>。</p>
+<a id="more"></a>
+
+<p>不過會使用到 CI/CD 現階段不是要在 Hexo 上做開發，而是<strong>備份</strong>。因為現在放 Hexo 檔案的電腦系統是 Arch Linux ，這系統很容易滾動更新到假死，甚至是真的掛點，所以我還是早早備份比較實在。</p>
+<h2 id="Tomcat-與-Jenkins"><a href="#Tomcat-與-Jenkins" class="headerlink" title="Tomcat 與 Jenkins"></a>Tomcat 與 Jenkins</h2><p>這兩個玩意都是第一次碰到。Apache Tomcat 是 JavaServer 容器系統，而 Jenkins 是 CI （持續整合）工具。</p>
+<p>Jenkins 不少專案都有使用它，例如 Minecraft Spigot 知名基礎插件 <a href="https://github.com/EssentialsX/Essentials" target="_blank" rel="noopener">EssentialsX</a> 。<br>但是我第一時間並沒有想到它，直到社團的同學買了 OVH VPS 並在上面架設 Jenkins 之後我才想到還可以這樣玩（當然我也買了 VPS 了）。</p>
+<p>而 Jenkins 需要類似 Apache Tomcat 的容器系統，雖然在 Ubuntu 上想要單純用 Jenkins 就直接 <code>sudo apt install jenkins</code> 就好了，不過考量到大二的時候需要寫 Java ，於是決定 <em>超前部署</em> ，先把 Tomcat 裝起來， Jenkins 直接在上面執行就好了。</p>
+<h2 id="重新規劃"><a href="#重新規劃" class="headerlink" title="重新規劃"></a>重新規劃</h2><p>原本想說又是把整個 Hexo 程式丟上去，Jenkins 部署這樣就大功告成，但是這樣有幾個問題：</p>
+<ul>
+<li>全部的 Commit（包含新增文章、佈景主題的修改）都會混在一起。以我的粗心程度可能要到所有事情都做完了才會發現哪裡改壞了，然後 Revert 整個 Hexo 程式 repo ，我會欲哭無淚。<ul>
+<li>那用 Branch 呢？似乎是個辦法，不過我沒有選擇這麼做。</li>
+</ul>
+</li>
+<li>CI/CD 模擬演練（雖然實際弄下來不太是正確的 CI/CD 架構就是了）</li>
+</ul>
+<p>所以我就規劃程這樣：</p>
+<ul>
+<li>Hexo 本體 - 包含主體設定檔（<code>_config.yml</code>）、鷹架（scaffolds）、沒有用到的文章</li>
+<li>Hexo source 資料夾 - 裡面有所有的文章和圖片，以及Github 需要的 CNAME 檔案</li>
+<li>Hexo Next 佈景主題 - 我在 clone 這個佈景主題下來的時候本身就有 Git 控制了，就繼續沿用 </li>
+</ul>
+<p>source 資料夾以及 Next 佈景主題在後面會利用 <code>git submodule</code> 來處理。</p>
+<p>然後以下是整個 repo 與 Jenkins 關係的超簡略架構圖：<br><img src="/images/posts/hexo_jenkins/hexo_with_Jenkins.png" alt="Hexo_and_Jenkins"></p>
+<p>從我最後實做出來的結果，大致上來說：</p>
+<ul>
+<li>Hexo 本體、Hexo source 與 Hexo Next 佈景主題的 repo 是母子關係，source 與 Next 佈景主題最後還是要在 Jenkins 底下合併且進行 Hexo deploy</li>
+<li>Hexo source 與 Hexo Next 佈景主題的 repo 有任何的 push ，WebHook 會呼叫 Jenkins 進行三個 Hexo 相關的 repo 進行整合（就 submodule update）</li>
+<li>當整個 Hexo 本體有變動的時候，WebHook 呼叫 Jenkins 進行 Hexo deploy</li>
+</ul>
+<p>就這樣，然後這架構讓我搞了一整天，累死。</p>
+<h2 id="終究免不了要用-VPS-（花錢）"><a href="#終究免不了要用-VPS-（花錢）" class="headerlink" title="終究免不了要用 VPS （花錢）"></a>終究免不了要用 VPS （花錢）</h2><p>你最後還是得花錢啦，但是已經比 Trivas CI 便宜太多了。</p>
+<p>OVH VPS 最便宜的方案 $3.5 鎂 / 月，而且你還可以玩其他東西，是真的很便宜。</p>
+<p>而且它也給了 2GB RAM ，基本上掛 Tomcat 是有餘力的。</p>
+<h2 id="Let’s-GO"><a href="#Let’s-GO" class="headerlink" title="Let’s GO!"></a>Let’s GO!</h2><p><em>以下是文章索引，可以快速跳轉到系列文相關的文章</em>  </p>
+<ul>
+<li><strong>01 緣由以及規劃</strong></li>
+<li><a href="/2020/06/hexo-with-tomcat-jenkins-02.html">02 使用 Git Submodule 分家</a></li>
+<li><a href="/2020/06/hexo-with-tomcat-jenkins-03.html">03 安裝 Tomcat 與 Jenkins</a></li>
+<li><a href="">04 Jenkins 與 Node.js</a></li>
+<li><a href="">05 設定 Jenkins 與 Github 連線</a></li>
+<li><a href="">番外 01 : 使用 Nginx 反向代理</a></li>
+<li><a href="">番外 02 : systemd 與它的保護機制</a></li>
+<li><a href="">終 結論以及遇到的問題</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Hexo-Tomcat-Jenkins/" rel="tag"><i class="fa fa-tag"></i> Hexo, Tomcat, Jenkins</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/06/hexo-with-tomcat-jenkins-02.html" rel="prev" title="Hexo 與 在 Tomcat 上的 Jenkins - 02 使用 Git Submodule 分家">
+      <i class="fa fa-chevron-left"></i> Hexo 與 在 Tomcat 上的 Jenkins - 02 使用 Git Submodule 分家
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/05/archlinux-wine-line-note.html" rel="next" title="在 Arch Linux 底下安裝 LINE 的筆記（使用 Wine）">
+      在 Arch Linux 底下安裝 LINE 的筆記（使用 Wine） <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#事由"><span class="nav-number">1.</span> <span class="nav-text">事由</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Tomcat-與-Jenkins"><span class="nav-number">2.</span> <span class="nav-text">Tomcat 與 Jenkins</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#重新規劃"><span class="nav-number">3.</span> <span class="nav-text">重新規劃</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#終究免不了要用-VPS-（花錢）"><span class="nav-number">4.</span> <span class="nav-text">終究免不了要用 VPS （花錢）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Let’s-GO"><span class="nav-number">5.</span> <span class="nav-text">Let’s GO!</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Nesquate"
+      src="/images/breathe_is_happy.JPG">
+  <p class="site-author-name" itemprop="name">Nesquate</p>
+  <div class="site-description" itemprop="description">即將邁入爆肝階段的大學生</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/Nesquate" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;Nesquate" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:nesquate.100001@gmail.com" title="E-Mail → mailto:nesquate.100001@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://twitter.com/Nesquate" title="Twitter → https:&#x2F;&#x2F;twitter.com&#x2F;Nesquate" rel="noopener" target="_blank"><i class="fab fa-twitter fa-fw"></i>Twitter</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://youtube.com/s101198" title="YouTube → https:&#x2F;&#x2F;youtube.com&#x2F;s101198" rel="noopener" target="_blank"><i class="fab fa-youtube fa-fw"></i>YouTube</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-nd.svg" alt="Creative Commons"></a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://hackmd.io/@nesquate" title="https:&#x2F;&#x2F;hackmd.io&#x2F;@nesquate" rel="noopener" target="_blank">HackMD</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Nesquate</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">總字數：</span>
+    <span title="總字數">10k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">所需總閱讀時間 &asymp;</span>
+    <span title="所需總閱讀時間">9 分鐘</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/disqusjs@1/dist/disqusjs.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/disqusjs@1/dist/disqus.js', () => {
+    window.dsqjs = new DisqusJS({
+      api       : '' || 'https://disqus.com/api/',
+      apikey    : 'oLMzIKPr4Xzsf1ICSL9uuICZpgRSyLtTlDAsMEZH0BNd6dMF7IostwnlTtWSkR7j',
+      shortname : 'Nesquate',
+      url       : "http://nesquate.tw/2020/05/hexo-with-tomcat-jenkins-01.html",
+      identifier: "2020/05/hexo-with-tomcat-jenkins-01.html",
+      title     : "Hexo 與 在 Tomcat 上的 Jenkins - 01 緣由以及規劃",
+    });
+  }, window.DisqusJS);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/websiteIcon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"nesquate.tw","root":"/","scheme":"Gemini","version":"8.0.0-rc.2","exturl":false,"sidebar":{"position":"left","width":220,"display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="近況最近實在是很忙，忙到沒時間寫這個系列文，大概也就是今天比較有空了吧，就趕快來寫一寫。 這篇開始應該就比較是真正進入核心重點的內容了，那麼我們就接著看下去。 操作環境 Ubuntu Server 20.04 Apache Tomcat 9 Jenkins 2.222.4 (LTS)  其他版本應該都大同小異…吧。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hexo 與 在 Tomcat 上的 Jenkins - 03 安裝 Tomcat 與 Jenkins">
+<meta property="og:url" content="http://nesquate.tw/2020/06/hexo-with-tomcat-jenkins-03.html">
+<meta property="og:site_name" content="Nesquate">
+<meta property="og:description" content="近況最近實在是很忙，忙到沒時間寫這個系列文，大概也就是今天比較有空了吧，就趕快來寫一寫。 這篇開始應該就比較是真正進入核心重點的內容了，那麼我們就接著看下去。 操作環境 Ubuntu Server 20.04 Apache Tomcat 9 Jenkins 2.222.4 (LTS)  其他版本應該都大同小異…吧。">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/hexo_with_jenkins_tomcat.png">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/tomcat_manager_gui.png">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/jenkins_install_no_permit.png">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/jenkins_install_01.png">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/jenkins_install_02.png">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/jenkins_install_03.png">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/jenkins_install_04.png">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/jenkins_install_05.png">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/jenkins_install_06.png">
+<meta property="og:image" content="http://nesquate.tw/images/posts/hexo_jenkins/jenkins_install_07.png">
+<meta property="article:published_time" content="2020-06-05T05:32:18.000Z">
+<meta property="article:modified_time" content="2020-06-05T07:16:05.842Z">
+<meta property="article:author" content="Nesquate">
+<meta property="article:tag" content="Hexo, Tomcat, Jenkins">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://nesquate.tw/images/posts/hexo_jenkins/hexo_with_jenkins_tomcat.png">
+
+<link rel="canonical" href="http://nesquate.tw/2020/06/hexo-with-tomcat-jenkins-03.html">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-TW'
+  };
+</script>
+
+  <title>Hexo 與 在 Tomcat 上的 Jenkins - 03 安裝 Tomcat 與 Jenkins | Nesquate</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切換導航欄">
+        <span class="toggle-line toggle-line-first"></span>
+        <span class="toggle-line toggle-line-middle"></span>
+        <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Nesquate</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">希望能夠被記得</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首頁</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>關於</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>標籤<span class="badge">8</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分類<span class="badge">4</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>歸檔<span class="badge">7</span></a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜尋
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜尋..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-TW">
+    <link itemprop="mainEntityOfPage" href="http://nesquate.tw/2020/06/hexo-with-tomcat-jenkins-03.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/breathe_is_happy.JPG">
+      <meta itemprop="name" content="Nesquate">
+      <meta itemprop="description" content="即將邁入爆肝階段的大學生">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Nesquate">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Hexo 與 在 Tomcat 上的 Jenkins - 03 安裝 Tomcat 與 Jenkins
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">發表於</span>
+              
+
+              <time title="創建時間：2020-06-05 13:32:18 / 修改時間：15:16:05" itemprop="dateCreated datePublished" datetime="2020-06-05T13:32:18+08:00">2020-06-05</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分類於</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/WebApp/" itemprop="url" rel="index"><span itemprop="name">WebApp</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="文章字數">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">文章字數：</span>
+              <span>1.9k</span>
+            </span>
+            <span class="post-meta-item" title="所需閱讀時間">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">所需閱讀時間 &asymp;</span>
+              <span>2 分鐘</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="近況"><a href="#近況" class="headerlink" title="近況"></a>近況</h2><p>最近實在是很忙，忙到沒時間寫這個系列文，<br>大概也就是今天比較有空了吧，就趕快來寫一寫。</p>
+<p>這篇開始應該就比較是真正進入核心重點的內容了，<br>那麼我們就接著看下去。</p>
+<h2 id="操作環境"><a href="#操作環境" class="headerlink" title="操作環境"></a>操作環境</h2><ul>
+<li>Ubuntu Server 20.04</li>
+<li>Apache Tomcat 9</li>
+<li>Jenkins 2.222.4 (LTS)</li>
+</ul>
+<p>其他版本應該都大同小異…吧。</p>
+<a id="more"></a>
+
+<h2 id="安裝-Tomcat-9"><a href="#安裝-Tomcat-9" class="headerlink" title="安裝 Tomcat 9"></a>安裝 Tomcat 9</h2><p>下這個指令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install tomcat9</span><br></pre></td></tr></table></figure>
+
+<p>apt 會幫你把 Tomcat 需要的 Java 以及一些設定都幫你弄好了。<del>至少不會像 Arch Linux 還要自己設定啦</del></p>
+<p>安裝好之後， Tomcat 預設的 Port 號是 8080 ，請確定防火牆有開啟對映的 Port 號，或是設定好 HTTP Server 反向代理。</p>
+<p>連上去會長這樣：<br><img src="/images/posts/hexo_jenkins/hexo_with_jenkins_tomcat.png" alt="hexo_with_jenkins_tomcat"></p>
+<h3 id="安裝與設定管理控制台"><a href="#安裝與設定管理控制台" class="headerlink" title="安裝與設定管理控制台"></a>安裝與設定管理控制台</h3><p>網頁底下表示還有其他相關套件可以安裝，那我們順便把 <code>tomcat9-admin</code> 給裝一下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install tomcat9-admin</span><br></pre></td></tr></table></figure>
+
+<p>這樣就會有管理控制台了，但是你會發現沒有使用者會登入不進去，<br>所以這時候需要給一個使用者讓我們能夠管理 Tomcat 。</p>
+<p>打開 <code>/etc/tomcat9/tomcat-users.xml</code> 加入下列內容：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">tomcat-users</span>&gt;</span></span><br><span class="line">...</span><br><span class="line"><span class="comment">&lt;!--</span></span><br><span class="line"><span class="comment">下面這行才是要新增的東西</span></span><br><span class="line"><span class="comment">上面和最底部檔案裡面有了</span></span><br><span class="line"><span class="comment">--&gt;</span></span><br><span class="line"> <span class="tag">&lt;<span class="name">user</span> <span class="attr">username</span>=<span class="string">"想要的 Username"</span> <span class="attr">password</span>=<span class="string">"想要的密碼"</span> <span class="attr">roles</span>=<span class="string">"manager-gui, admin-gui"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">tomcat-users</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>改完之後記得<strong>重啟 Tomcat</strong>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl restart tomcat9</span><br></pre></td></tr></table></figure>
+
+<p>這樣就可以登入控制台了。<br>有了控制台就可以只對 Jenkins 進行停止運作的操作，而不用整個 Tomcat 都停止。</p>
+<p><img src="/images/posts/hexo_jenkins/tomcat_manager_gui.png" alt="tomcat_manager_gui"></p>
+<h2 id="安裝-Jenkins"><a href="#安裝-Jenkins" class="headerlink" title="安裝 Jenkins"></a>安裝 Jenkins</h2><p>下載 Jenkins 的 war 檔案，相關檔案可以在 <a href="https://www.jenkins.io/download/" target="_blank" rel="noopener">Jenkins 官網下載區</a>找到。</p>
+<p>然後就可以用 curl 或 wget 的指令把它抓下來：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -O http://mirror.serverion.com/jenkins/war-stable/2.222.4/jenkins.war</span><br></pre></td></tr></table></figure>
+
+<p>記得把 jenkins.war 複製到 <code>/var/lib/tomcat9/webapps/</code> ，讓 Tomcat Deploy。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo cp jenkins.war /var/lib/tomcat9/webapps/</span><br></pre></td></tr></table></figure>
+
+<p>然後瀏覽到 Jenkins 底下的子目錄，就發現權限不足的訊息了。</p>
+<p><img src="/images/posts/hexo_jenkins/jenkins_install_no_permit.png" alt="jenkins_install_no_permit"></p>
+<h3 id="解決權限不足的問題"><a href="#解決權限不足的問題" class="headerlink" title="解決權限不足的問題"></a>解決權限不足的問題</h3><p>上面那張圖其實有兩個問題：</p>
+<ul>
+<li>權限不足 -&gt; 後來發現是 systemd 的問題</li>
+<li>路徑錯誤 -&gt; jenkins 相關資料放在根目錄並不安全</li>
+</ul>
+<p>逐步修正：</p>
+<ol>
+<li>利用 Jenkins 環境變數把 JENKINS_HOME 的位置改變</li>
+</ol>
+<p>開啟 <code>/etc/tomcat9/context.xml</code> 檔案，加入以下內容：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">Context</span> <span class="attr">...</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">Environment</span> <span class="attr">name</span>=<span class="string">"JENKINS_HOME"</span> <span class="attr">value</span>=<span class="string">"/path/to/jenkins_home/"</span> <span class="attr">type</span>=<span class="string">"java.lang.String"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">Context</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>你可以把 <code>/path/to/jenkins_home/</code> 改成你想要的地方，總而言之不要 root 就對了。<br>如果該資料夾目前不存在，<strong>記得先新增</strong>以免 systemd 出現問題。<br>還有要把相關資料夾指定成 tomcat 的使用者與群組：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo chown -R tomcat:tomcat jenkins_home/</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>systemd service 檔案修正</li>
+</ol>
+<p>相關檔案在 <code>/lib/systemd/system/tomcat9.service</code> ，把它打開來並且在 <code># Security</code> 的段落加入：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ReadWritePaths&#x3D;&#x2F;path&#x2F;to&#x2F;jenkins_home&#x2F;</span><br></pre></td></tr></table></figure>
+
+<p>存檔並：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo systemctl daemon-reload <span class="comment"># 重新載入 service 檔案</span></span><br><span class="line">sudo systemctl restart tomcat9 <span class="comment"># 重啟 Tomcat</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="繼續安裝"><a href="#繼續安裝" class="headerlink" title="繼續安裝"></a>繼續安裝</h3><p>看一下瀏覽器，就依照它的步驟進行就好：<br><img src="/images/posts/hexo_jenkins/jenkins_install_01.png" alt="jenkins_install_01"><br><img src="/images/posts/hexo_jenkins/jenkins_install_02.png" alt="jenkins_install_02"><br><img src="/images/posts/hexo_jenkins/jenkins_install_03.png" alt="jenkins_install_03"><br><img src="/images/posts/hexo_jenkins/jenkins_install_04.png" alt="jenkins_install_04"><br><img src="/images/posts/hexo_jenkins/jenkins_install_05.png" alt="jenkins_install_05"><br><img src="/images/posts/hexo_jenkins/jenkins_install_06.png" alt="jenkins_install_06"><br><img src="/images/posts/hexo_jenkins/jenkins_install_07.png" alt="jenkins_install_07"></p>
+<h2 id="Let’s-GO"><a href="#Let’s-GO" class="headerlink" title="Let’s GO!"></a>Let’s GO!</h2><p><em>以下是文章索引，可以快速跳轉到系列文相關的文章</em>  </p>
+<ul>
+<li><a href="/2020/05/hexo-with-tomcat-jenkins-01.html">01 緣由以及規劃</a></li>
+<li><a href="/2020/06/hexo-with-tomcat-jenkins-02.html">02 使用 Git Submodule 分家</a></li>
+<li><strong>03 安裝 Tomcat 與 Jenkins</strong></li>
+<li><a href="">04 Jenkins 與 Node.js</a></li>
+<li><a href="">05 設定 Jenkins 與 Github 連線</a></li>
+<li><a href="">番外 01 : 使用 Nginx 反向代理</a></li>
+<li><a href="">番外 02 : systemd 與它的保護機制</a></li>
+<li><a href="">終 結論以及遇到的問題</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Hexo-Tomcat-Jenkins/" rel="tag"><i class="fa fa-tag"></i> Hexo, Tomcat, Jenkins</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2020/06/hexo-with-tomcat-jenkins-02.html" rel="next" title="Hexo 與 在 Tomcat 上的 Jenkins - 02 使用 Git Submodule 分家">
+      Hexo 與 在 Tomcat 上的 Jenkins - 02 使用 Git Submodule 分家 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目錄
+        </li>
+        <li class="sidebar-nav-overview">
+          本站概要
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#近況"><span class="nav-number">1.</span> <span class="nav-text">近況</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#操作環境"><span class="nav-number">2.</span> <span class="nav-text">操作環境</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安裝-Tomcat-9"><span class="nav-number">3.</span> <span class="nav-text">安裝 Tomcat 9</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#安裝與設定管理控制台"><span class="nav-number">3.1.</span> <span class="nav-text">安裝與設定管理控制台</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安裝-Jenkins"><span class="nav-number">4.</span> <span class="nav-text">安裝 Jenkins</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#解決權限不足的問題"><span class="nav-number">4.1.</span> <span class="nav-text">解決權限不足的問題</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#繼續安裝"><span class="nav-number">4.2.</span> <span class="nav-text">繼續安裝</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Let’s-GO"><span class="nav-number">5.</span> <span class="nav-text">Let’s GO!</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Nesquate"
+      src="/images/breathe_is_happy.JPG">
+  <p class="site-author-name" itemprop="name">Nesquate</p>
+  <div class="site-description" itemprop="description">即將邁入爆肝階段的大學生</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">文章</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">分類</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">標籤</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/Nesquate" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;Nesquate" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:nesquate.100001@gmail.com" title="E-Mail → mailto:nesquate.100001@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://twitter.com/Nesquate" title="Twitter → https:&#x2F;&#x2F;twitter.com&#x2F;Nesquate" rel="noopener" target="_blank"><i class="fab fa-twitter fa-fw"></i>Twitter</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://youtube.com/s101198" title="YouTube → https:&#x2F;&#x2F;youtube.com&#x2F;s101198" rel="noopener" target="_blank"><i class="fab fa-youtube fa-fw"></i>YouTube</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-nd.svg" alt="Creative Commons"></a>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://hackmd.io/@nesquate" title="https:&#x2F;&#x2F;hackmd.io&#x2F;@nesquate" rel="noopener" target="_blank">HackMD</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Nesquate</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+      <span class="post-meta-item-text">總字數：</span>
+    <span title="總字數">10k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span class="post-meta-item-text">所需總閱讀時間 &asymp;</span>
+    <span title="所需總閱讀時間">9 分鐘</span>
+</div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/disqusjs@1/dist/disqusjs.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/disqusjs@1/dist/disqus.js', () => {
+    window.dsqjs = new DisqusJS({
+      api       : '' || 'https://disqus.com/api/',
+      apikey    : 'oLMzIKPr4Xzsf1ICSL9uuICZpgRSyLtTlDAsMEZH0BNd6dMF7IostwnlTtWSkR7j',
+      shortname : 'Nesquate',
+      url       : "http://nesquate.tw/2020/06/hexo-with-tomcat-jenkins-03.html",
+      identifier: "2020/06/hexo-with-tomcat-jenkins-03.html",
+      title     : "Hexo 與 在 Tomcat 上的 Jenkins - 03 安裝 Tomcat 與 Jenkins",
+    });
+  }, window.DisqusJS);
+});
+</script>
+
+</body>
+</html>
